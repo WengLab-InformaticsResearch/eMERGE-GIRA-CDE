@@ -55,7 +55,7 @@ class OmopExtractor:
             logger.warning(f'Received an MRN with an unhandled format: {mrn}')
             return list()
 
-        df_persons = pd.read_sql(sql, self.sql_conn, params=[mrn, facility_code])
+        df_persons = pd.read_sql(sql, self.sql_conn, params=(mrn, facility_code))
 
         matches = list()
         for index, row in df_persons.iterrows():
@@ -166,7 +166,7 @@ class OmopExtractor:
         FROM measurement
         WHERE person_id = ? AND measurement_concept_id IN ({allergy_test_omop_ids_str})
         """
-        df = pd.read_sql(sql, self.sql_conn, params=[person_id])
+        df = pd.read_sql(sql, self.sql_conn, params=(person_id,))
 
         # Check which measurements are positive
         df['result'] = df.apply(OmopExtractor._check_positive_allergy_test, axis=1, result_type='reduce')
@@ -204,7 +204,7 @@ class OmopExtractor:
         INTO #ecz_std_concept_ids
         FROM #ecz_icd_mappings;
         """
-        self.sql_conn.execute(sql)
+        self.sql_conn.exec_driver_sql(sql)
 
 
     def initialize_wheeze_conditions(self):
@@ -235,7 +235,7 @@ class OmopExtractor:
         INTO #whe_std_concept_ids
         FROM #whe_icd_mappings;
         """
-        self.sql_conn.execute(sql)
+        self.sql_conn.exec_driver_sql(sql)
 
 
     def eczema_events(self, person_id, delta_threshold=1):
@@ -251,7 +251,7 @@ class OmopExtractor:
             AND (DATEDIFF(day, p.birth_datetime, co.condition_start_datetime) / 365.24) < 18
         ORDER BY condition_start_datetime ASC;
         """
-        df = pd.read_sql(sql, self.sql_conn, params=[person_id])
+        df = pd.read_sql(sql, self.sql_conn, params=(person_id,))
 
         events = list()
         if df is not None and len(df) > 0:
@@ -282,7 +282,7 @@ class OmopExtractor:
             AND (DATEDIFF(day, p.birth_datetime, co.condition_start_datetime) / 365.24) < 18
         ORDER BY condition_start_datetime ASC;
         """
-        df = pd.read_sql(sql, self.sql_conn, params=[person_id])
+        df = pd.read_sql(sql, self.sql_conn, params=(person_id,))
 
         events = list()
         if df is not None and len(df) > 0:
@@ -322,7 +322,7 @@ class OmopExtractor:
             sql += " AND value_source_value NOT LIKE '<%' AND value_source_value NOT LIKE '>%' "
 
         sql += " ORDER BY measurement_datetime DESC;"
-        df = pd.read_sql(sql, self.sql_conn, params=params)
+        df = pd.read_sql(sql, self.sql_conn, params=tuple(params))
 
         return None if df.empty else df.iloc[0, :]
 
